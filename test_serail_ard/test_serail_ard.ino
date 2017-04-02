@@ -36,7 +36,6 @@ uint8_t act_read[act_Count];
 //init Serial
 byte tBuf[28];
 byte rBuf[8];
-uint8_t Sum_Reset ;
 
 //Var time delay
 unsigned long previousMillis;
@@ -59,7 +58,7 @@ void BH1750_Init(int address) {
   Wire.endTransmission();
 }
 
-  byte i_BH1750=0;
+byte BH1750_Read(int address) {
   byte i_BH1750 = 0;
   Wire.beginTransmission(address);
   Wire.requestFrom(address, 2);
@@ -105,7 +104,7 @@ void setup() {
   Serial.print("HO HO HO HOOO.555555555555555555555 555 55 5");
   delay(100);
 
-  mySerial.begin(9600);
+  mySerial.begin(112500);
   delay(100);
 
   // Sensor and Act
@@ -176,12 +175,19 @@ void loop() {
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
     wdt_reset();
+    Serial.println();
     Serial.println(".");
 
-
-
-    GetValue();
-    /////////////////////  Sensor /////////////////////
+    // Read act
+    Serial.print("act :");
+    for (int i = 0; i < act_Count; i++)
+    {
+      act_read[i] = digitalRead(relayPin[i]);
+      Serial.print(digitalRead(relayPin[i]));
+    }
+    Serial.println();
+    
+    /////////////////  Sensor //////////////////
     for (int i = 0; i < sensor_Count; i++)
     {
       sensor_val[i] = 0;
@@ -231,7 +237,6 @@ void loop() {
     sensor_val[7] = humidity3 * 10;
     sensor_val[8] = temperature3 * 10;
 
-    Serial.println();
 
     // 1
     Serial.print("Air_RH_val 1 \t: ");
@@ -241,7 +246,6 @@ void loop() {
     Serial.print("Air_Temp_val 1 \t: ");
     Serial.print(sensor_val[4], 1);
     Serial.println(" C");
-    Serial.println();
 
     // 2
     Serial.print("Air_RH_val 2 \t: ");
@@ -251,7 +255,6 @@ void loop() {
     Serial.print("Air_Temp_val 2 \t: ");
     Serial.print(sensor_val[6], 1);
     Serial.println(" C");
-    Serial.println();
 
     // 3
     Serial.print("Air_RH_val 3 \t: ");
@@ -261,31 +264,19 @@ void loop() {
     Serial.print("Air_Temp_val 3 \t: ");
     Serial.print(sensor_val[8], 1);
     Serial.println(" C");
-    Serial.println();
 
     //water
     sensor_val[9] = analogRead(waterPin);
     Serial.print("water_val : " );
     Serial.println(sensor_val[9]);
 
-    Serial.println("________________________");
-    Serial.println();
     ///////////// !end Sensor /////////////
 
 
-    ///////////// act /////////////
-    // Read act
-    Serial.print(" act :");
-    for (int i = 0; i < act_Count; i++)
-    {
-      act_read[i] = digitalRead(relayPin[i]);
-      Serial.print(digitalRead(relayPin[i]));
-    }
-    Serial.println();
-
+    ///////////// act mode /////////////  
     //act mode
     int chkActMode = digitalRead(actModePin);
-    Serial.print(" Mode act :");
+    Serial.print("Mode act :");
     Serial.println(chkActMode);
     if (( chkActModeAgo + chkActMode ) == 1)
     {
@@ -294,7 +285,8 @@ void loop() {
     }
 
     if (digitalRead(actModePin) == 0) // Mode Switch manual
-    {
+    {    
+      // write act
       for (int i = 0; i < act_Count; i++)
       {
         digitalWrite(relayPin[i], HIGH);
@@ -332,38 +324,51 @@ void loop() {
       tBuf[i + act_Count + sensor_Count + 1] = (int)bVal[2];
     }
 
-    //print tBuf
-    Serial.println(tBuf[0]);
-    Serial.println(tBuf[1]);
-    Serial.println(tBuf[2]);
-    Serial.println(tBuf[3]);
-    Serial.println(tBuf[4]);
-    Serial.println(tBuf[5]);
-    Serial.println(tBuf[6]);
-    Serial.println(tBuf[7]);
-    Serial.println(tBuf[8]);
-    Serial.println(tBuf[9]);
-    Serial.println(tBuf[10]);
-    Serial.println(tBuf[11]);
-    Serial.println(tBuf[12]);
-    Serial.println(tBuf[13]);
-    Serial.println(tBuf[14]);
-    Serial.println(tBuf[15]);
-    Serial.println(tBuf[16]);
-    Serial.println(tBuf[17]);
-    Serial.println(tBuf[18]);
-    Serial.println(tBuf[19]);
-    Serial.println(tBuf[20]);
-    Serial.println(tBuf[21]);
-    Serial.println(tBuf[22]);
-    Serial.println(tBuf[23]);
-    Serial.println(tBuf[24]);
-    Serial.println(tBuf[25]);
-    Serial.println(tBuf[26]);
-    Serial.println(tBuf[27]);
+//    //print tBuf
+//    Serial.println(tBuf[0]);
+//    Serial.println(tBuf[1]);
+//    Serial.println(tBuf[2]);
+//    Serial.println(tBuf[3]);
+//    Serial.println(tBuf[4]);
+//    Serial.println(tBuf[5]);
+//    Serial.println(tBuf[6]);
+//    Serial.println(tBuf[7]);
+//    Serial.println(tBuf[8]);
+//    Serial.println(tBuf[9]);
+//    Serial.println(tBuf[10]);
+//    Serial.println(tBuf[11]);
+//    Serial.println(tBuf[12]);
+//    Serial.println(tBuf[13]);
+//    Serial.println(tBuf[14]);
+//    Serial.println(tBuf[15]);
+//    Serial.println(tBuf[16]);
+//    Serial.println(tBuf[17]);
+//    Serial.println(tBuf[18]);
+//    Serial.println(tBuf[19]);
+//    Serial.println(tBuf[20]);
+//    Serial.println(tBuf[21]);
+//    Serial.println(tBuf[22]);
+//    Serial.println(tBuf[23]);
+//    Serial.println(tBuf[24]);
+//    Serial.println(tBuf[25]);
+//    Serial.println(tBuf[26]);
+//    Serial.println(tBuf[27]);
 
     ///////////// !Set tBuf /////////////
 
+
+
+    ///////////// Sent tBuf to esp /////////////
+    mySerial.write(tBuf,sizeof(tBuf));
+    
+    ///////////// !Sent tBuf to esp /////////////
+
+
+
+    // -------------- code here -------------- 
+
+
+    
     if (mySerial.overflow()) {
       Serial.println("SoftwareSerial overflow!");
     }
@@ -371,7 +376,13 @@ void loop() {
     if (mySerial.isListening())
     {
     }
+    
+    Serial.println("________________________");
+    Serial.println();
 
   }
 }
+
+
+
 
