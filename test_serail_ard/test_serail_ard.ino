@@ -316,7 +316,7 @@ void loop(){
     
     if(mySerial.isListening())
     {
-      
+      test
     }
     
   }  
