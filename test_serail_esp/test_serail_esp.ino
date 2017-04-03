@@ -154,7 +154,7 @@ void setup() {
 
   setup_wifi();
   setup_mqtt();
-  
+
   Firebase.begin(FIREBASE_HOST, FIREBASE_KEY);
 
   mySerial.begin(112500);
@@ -241,7 +241,7 @@ void loop() {
     ///////////// rBuf to Json /////////////
 
     char msg[30];
-
+    
     // act
     int j = 0;
     String object1 = "{";
@@ -251,6 +251,15 @@ void loop() {
       //      Serial.print(act_read[i]);
 
       snprintf (msg, 30, "\"%ld\":%ld", j, act_read[i]);
+
+
+      //sent act to firebase
+      if (chkSum != 0)
+      {
+        Firebase.set("act_read/" + String(j), act_read[i]);
+      }
+      
+
       object1.concat(msg);
       if (i < act_Count - 1)
       {
@@ -271,6 +280,15 @@ void loop() {
       //      Serial.println(sensor_val[i]);
 
       snprintf (msg, 30, "\"%ld\":%ld", j, sensor_val[i]);
+
+            
+      //sent val to firebase
+      if (chkSum != 0)
+      {
+        Firebase.set( "sensor_val/" + String(j), sensor_val[i]);
+      }
+
+      
       object2.concat(msg);
       if (i < sensor_Count - 1)
       {
@@ -288,7 +306,7 @@ void loop() {
 
     Serial.println(cstr1);
     Serial.println(cstr2);
-    
+
     ///////////// ! rBuf to Json /////////////
 
 
@@ -298,7 +316,7 @@ void loop() {
     {
       client.publish("act_state", cstr1);
       client.publish("val_sensor", cstr2);
-      Serial.println("act_state,val_sensor ---->  mqtt");      
+      Serial.println("act_state,val_sensor ---->  mqtt");
     }
     else
     {
