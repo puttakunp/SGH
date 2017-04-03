@@ -228,61 +228,80 @@ void loop() {
       chkSum = chkSum + rBuf[i];
     }
 
+
+
+
+    ///////////// rBuf to Json /////////////
+
+    char msg[30];
+
+    // act
+    int j = 0;
+    String object1 = "{";
+    for (int i = 0; i < act_Count; i++)
+    {
+      act_read[i] = rBuf[i + 1]  ;
+      //      Serial.print(act_read[i]);
+
+      snprintf (msg, 30, "\"%ld\":%ld", j, act_read[i]);
+      object1.concat(msg);
+      if (i < act_Count - 1)
+      {
+        object1.concat(",");
+      }
+      j++;
+    }
+    object1.concat("}");
+
+
+    // val
+    j = 0;
+    String object2 = "{";
+    for (int i = 0; i < sensor_Count; i++)
+    {
+      byte bVal[4] = {0, 0, rBuf[i + act_Count + sensor_Count + 1], rBuf[i + act_Count + 1]};
+      sensor_val[i] = bytesToInteger(bVal);
+      //      Serial.println(sensor_val[i]);
+
+      snprintf (msg, 30, "\"%ld\":%ld", j, sensor_val[i]);
+      object2.concat(msg);
+      if (i < sensor_Count - 1)
+      {
+        object2.concat(",");
+      }
+      j++;
+    }
+    object2.concat("}");
+
+    char *cstr1 = new char[object1.length() + 1];
+    strcpy(cstr1, object1.c_str());
+
+    char *cstr2 = new char[object2.length() + 1];
+    strcpy(cstr2, object2.c_str());
+
+    Serial.println(cstr1);
+    Serial.println(cstr2);
+    
+    ///////////// ! rBuf to Json /////////////
+
+
+    ///////////// Sent rBuf to MQTT /////////////
+
     if (chkSum != 0)
     {
+      client.publish("act_state", cstr1);
+      client.publish("val_sensor", cstr2);
+      Serial.println("act_state,val_sensor ---->  mqtt");      
+    }
+    else
+    {
+      Serial.println("checkNULL = 0;");
+    }
+    ///////////// ! Sent rBuf to MQTT /////////////
 
 
-      ///////////// rBuf to Json /////////////
-
-      int j = 0;
-      char msg[30];
-      String object = "{";
-
-      // act
-      for (int i = 0; i < act_Count; i++)
-      {
-        act_read[i] = rBuf[i + 1]  ;
-        //      Serial.print(act_read[i]);
-
-        snprintf (msg, 30, "\"%ld\":%ld", j, act_read[i]);
-        object.concat(msg);
-        object.concat(",");
-        j++;
-      }
-      Serial.println();
-
-      // val
-      for (int i = 0; i < sensor_Count; i++)
-      {
-        byte bVal[4] = {0, 0, rBuf[i + act_Count + sensor_Count + 1], rBuf[i + act_Count + 1]};
-        sensor_val[i] = bytesToInteger(bVal);
-        //      Serial.println(sensor_val[i]);
-
-        snprintf (msg, 30, "\"%ld\":%ld", j, sensor_val[i]);
-        object.concat(msg);
-        if (i < sensor_Count - 1)
-        {
-          object.concat(",");
-        }
-        j++;
-      }
-
-      object.concat("}");
-      char *cstr = new char[object.length() + 1];
-      strcpy(cstr, object.c_str());
-      Serial.println(object);
-      ///////////// ! rBuf to Json /////////////
 
 
-      ///////////// Sent rBuf to MQTT /////////////
-
-      client.publish("val", cstr);
-
-      ///////////// ! Sent rBuf to MQTT /////////////
-      
-    }// end chkSum
-
-    
     // -------------- code here --------------
 
 

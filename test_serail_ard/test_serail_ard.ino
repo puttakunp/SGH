@@ -101,7 +101,7 @@ void GetValue() {
 void setup() {
   // Serial
   Serial.begin(115200);
-  Serial.print("HO HO HO HOOO.555555555555555555555 555 55 5");
+  Serial.print("HO HO HO HOOO.---------------------------------");
   delay(100);
 
   mySerial.begin(112500);
@@ -114,7 +114,7 @@ void setup() {
     act_state[i] = HIGH;
     pinMode(relayPin[i], OUTPUT);
     digitalWrite(relayPin[i], act_state[i]);
-    Serial.print(digitalRead(relayPin[i]));
+    //Serial.print(digitalRead(relayPin[i]));
   }
 
   Wire.begin();
