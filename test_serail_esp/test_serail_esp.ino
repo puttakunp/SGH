@@ -301,6 +301,9 @@ void loop() {
       client.publish("val_sensor", cstr2);
       Serial.println("ok");
 
+      
+      Serial.print("act_state,val_sensor ---->  mqtt ...");
+      
       StaticJsonBuffer<200> jsonBuffer;      
       JsonObject& act_stateJSON = jsonBuffer.createObject();
       JsonObject& val_sensorJSON = jsonBuffer.createObject();
@@ -314,10 +317,8 @@ void loop() {
       {
         act_stateJSON["sensor_val/" + String(i)] = sensor_val[i];
       }
-      
-      
+            
 
-      Serial.print("act_state,val_sensor ---->  mqtt ...");
       Firebase.set("act_state", act_stateJSON);
       Firebase.set("val_sensor", val_sensorJSON);
 
