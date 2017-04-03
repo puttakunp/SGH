@@ -2,7 +2,6 @@
 #include <SoftwareSerial.h>
 #include <PubSubClient.h>
 #include <FirebaseArduino.h>
-#include <ArduinoJson.h>
 
 SoftwareSerial mySerial(4, 5); //rx,tx//d2,d1
 
@@ -40,8 +39,6 @@ long sensor_val[sensor_Count];
 const int act_Count = 6;
 uint8_t act_state[act_Count];
 long act_read[act_Count];
-
-
 
 bool setup_mqtt()
 {
@@ -162,12 +159,6 @@ void setup() {
   while (mySerial.available()) {
     char ch = mySerial.read();
   }
-
-  for (int i = 0; i < sizeof(rBuf); i++)
-  {
-    rBuf[i] = 0;
-  }
-
 }
 
 
@@ -187,165 +178,160 @@ void loop() {
     if ( !client.connected() ) {
       setup_mqtt();
     }
-  }
-
-  ///////////// Receive value for Arduino /////////////
-
-  int k = 0;
-  bool check = false;
-  while (mySerial.available())
-  {
-    rBuf[k] = mySerial.read();
-
-    if (rBuf[k] == 173 && k == 0)
-    {
-      check = true;
-    }
-
-    if (check == true)
-    {
-      if (rBuf[k] == 237 && k == 27)
-      {
-        k = 0;
-        check = false;
-        break;
-      }
-      k++;
-    }
-  }
-
-  //    // print rBuf
-  //    for (int i = 0; i < sizeof(rBuf); i++)
-  //    {
-  //      Serial.print(i);
-  //      Serial.print(" : ");
-  //      Serial.println(rBuf[i]);
-  //    }
-
-  ///////////// !Receive rBuf /////////////
-
-
-
-
-
-  if ( millis() - lastSend > 1000 ) {
-
-    int chkSum = 0;
-    for (int i = 0; i < sizeof(rBuf); i++)
-    {
-      chkSum = chkSum + rBuf[i];
-    }
-
-
-
-
-    ///////////// rBuf to Json /////////////
-
-    char msg[30];
-
-    // act
-    int j = 0;
-    String object1 = "{";
-    for (int i = 0; i < act_Count; i++)
-    {
-      act_read[i] = rBuf[i + 1]  ;
-      //      Serial.print(act_read[i]);
-      snprintf (msg, 30, "\"%ld\":%ld", j, act_read[i]);
-      object1.concat(msg);
-      if (i < act_Count - 1)
-      {
-        object1.concat(",");
-      }
-      j++;
-    }
-    object1.concat("}");
-
-
-    // val
-    j = 0;
-    String object2 = "{";
-    for (int i = 0; i < sensor_Count; i++)
-    {
-      byte bVal[4] = {0, 0, rBuf[i + act_Count + sensor_Count + 1], rBuf[i + act_Count + 1]};
-      sensor_val[i] = bytesToInteger(bVal);
-      //      Serial.println(sensor_val[i]);
-      snprintf (msg, 30, "\"%ld\":%ld", j, sensor_val[i]);
-      object2.concat(msg);
-      if (i < sensor_Count - 1)
-      {
-        object2.concat(",");
-      }
-      j++;
-    }
-    object2.concat("}");
-
-    char *cstr1 = new char[object1.length() + 1];
-    strcpy(cstr1, object1.c_str());
-
-    char *cstr2 = new char[object2.length() + 1];
-    strcpy(cstr2, object2.c_str());
-
-    Serial.println(cstr1);
-    Serial.println(cstr2);
-
-    ///////////// ! rBuf to Json /////////////
-
-
-    ///////////// Sent rBuf to MQTT /////////////
-
-    if (chkSum != 0)
-    {
-
-      Serial.print("act_state,val_sensor ---->  mqtt ...");
-      client.publish("act_state", cstr1);
-      client.publish("val_sensor", cstr2);
-      Serial.println("ok");
-
-      
-      Serial.print("act_state,val_sensor ---->  mqtt ...");
-      
-      StaticJsonBuffer<200> jsonBuffer;      
-      JsonObject& act_stateJSON = jsonBuffer.createObject();
-      JsonObject& val_sensorJSON = jsonBuffer.createObject();
-      
-      for (int i = 0; i < act_Count; i++)
-      {
-        act_stateJSON["act_read/" + String(i)] = act_read[i];
-      }
-
-      for (int i = 0; i < sensor_Count; i++)
-      {
-        act_stateJSON["sensor_val/" + String(i)] = sensor_val[i];
-      }
-            
-
-      Firebase.set("act_state", act_stateJSON);
-      Firebase.set("val_sensor", val_sensorJSON);
-
-
-      
-      Serial.println("ok");
-    }
     else
     {
-      Serial.println("checkNULL = 0;");
+      if ( millis() - lastSend > 2000 )
+      {
+        lastSend = millis();
+        ///////////// Receive value for Arduino /////////////
+
+        //set rBuf 0
+        for (int i = 0; i < sizeof(rBuf); i++)
+        {
+          rBuf[i] = 0;
+        }
+
+        int k = 0;
+        bool check = false;
+        while (mySerial.available())
+        {
+          rBuf[k] = mySerial.read();
+
+          if (rBuf[k] == 173 && k == 0)
+          {
+            check = true;
+          }
+
+          if (check == true)
+          {
+            if (rBuf[k] == 237 && k == 27)
+            {
+              k = 0;
+              check = false;
+              break;
+            }
+            k++;
+          }
+        }
+
+        //    // print rBuf
+        //    for (int i = 0; i < sizeof(rBuf); i++)
+        //    {
+        //      Serial.print(i);
+        //      Serial.print(" : ");
+        //      Serial.println(rBuf[i]);
+        //    }
+
+        ///////////// !Receive rBuf /////////////
+
+
+        int chkSum = 0;
+        for (int i = 0; i < sizeof(rBuf); i++)
+        {
+          chkSum = chkSum + rBuf[i];
+        }
+
+        Serial.println(chkSum);
+        if (chkSum != 0)
+        {
+          ///////////// rBuf to Json /////////////
+
+          char msg[30];
+
+          // act
+          int j = 0;
+          String object1 = "{";
+          for (int i = 0; i < act_Count; i++)
+          {
+            act_read[i] = rBuf[i + 1]  ;
+            //      Serial.print(act_read[i]);
+            snprintf (msg, 30, "\"%ld\":%ld", j, act_read[i]);
+            object1.concat(msg);
+            if (i < act_Count - 1)
+            {
+              object1.concat(",");
+            }
+            j++;
+          }
+          object1.concat("}");
+
+
+          // val
+          j = 0;
+          String object2 = "{";
+          for (int i = 0; i < sensor_Count; i++)
+          {
+            byte bVal[4] = {0, 0, rBuf[i + act_Count + sensor_Count + 1], rBuf[i + act_Count + 1]};
+            sensor_val[i] = bytesToInteger(bVal);
+            //      Serial.println(sensor_val[i]);
+            snprintf (msg, 30, "\"%ld\":%ld", j, sensor_val[i]);
+            object2.concat(msg);
+            if (i < sensor_Count - 1)
+            {
+              object2.concat(",");
+            }
+            j++;
+          }
+          object2.concat("}");
+
+          char *cstr1 = new char[object1.length() + 1];
+          strcpy(cstr1, object1.c_str());
+
+          char *cstr2 = new char[object2.length() + 1];
+          strcpy(cstr2, object2.c_str());
+
+          Serial.println(cstr1);
+          Serial.println(cstr2);
+
+          ///////////// ! rBuf to Json /////////////
+
+
+          /////////////            Sent Data          /////////////
+
+          ///////////// Sent Data to MQTT /////////////
+          Serial.print("act_state,val_sensor ---->  mqtt ...");
+          client.publish("act_state", cstr1);
+          client.publish("val_sensor", cstr2);
+          Serial.println("ok");
+
+          ///////////// Sent Data to firebase /////////////
+          Serial.print("act_state,val_sensor ---->  firebase ...");
+          StaticJsonBuffer<200> jsonBuffer;
+          JsonObject& root = jsonBuffer.parseObject(cstr1);
+          if (!root.success()) {
+            Serial.println("parseObject() failed");
+            return;
+          }
+          Firebase.set("act_state", root );
+
+          StaticJsonBuffer<200> jsonBuffer2;
+          JsonObject& root2 = jsonBuffer2.parseObject(cstr2);
+          if (!root.success()) {
+            Serial.println("parseObject() failed");
+            return;
+          }
+          Firebase.set("val_sensor", root2 );
+          Serial.println("ok");
+          ///////////// ! Sent Data to firebase /////////////
+        }
+        else
+        {
+          Serial.println("checkNULL = 0;");
+        }
+
+        //clear buffer rBuf
+        //        while (mySerial.available())
+        //        {
+        //          char ch = mySerial.read();
+        //        }
+
+        // -------------- code here --------------
+
+        Serial.println(".");
+        client.publish("conn", "1");
+        Serial.println("--------------");
+
+      }
     }
-    ///////////// ! Sent rBuf to MQTT /////////////
-
-
-
-
-    // -------------- code here --------------
-
-
-
-
-    Serial.println(".");
-    client.publish("conn", "1");
-    lastSend = millis();
-    Serial.println("--------------");
-
   }
-  client.loop();
-
 }
