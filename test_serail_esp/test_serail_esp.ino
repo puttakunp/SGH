@@ -2,6 +2,7 @@
 #include <SoftwareSerial.h>
 #include <PubSubClient.h>
 #include <FirebaseArduino.h>
+#include <ArduinoJson.h>
 
 SoftwareSerial mySerial(4, 5); //rx,tx//d2,d1
 
@@ -241,7 +242,7 @@ void loop() {
     ///////////// rBuf to Json /////////////
 
     char msg[30];
-    
+
     // act
     int j = 0;
     String object1 = "{";
@@ -249,17 +250,7 @@ void loop() {
     {
       act_read[i] = rBuf[i + 1]  ;
       //      Serial.print(act_read[i]);
-
       snprintf (msg, 30, "\"%ld\":%ld", j, act_read[i]);
-
-
-      //sent act to firebase
-      if (chkSum != 0)
-      {
-        Firebase.set("act_read/" + String(j), act_read[i]);
-      }
-      
-
       object1.concat(msg);
       if (i < act_Count - 1)
       {
@@ -278,17 +269,7 @@ void loop() {
       byte bVal[4] = {0, 0, rBuf[i + act_Count + sensor_Count + 1], rBuf[i + act_Count + 1]};
       sensor_val[i] = bytesToInteger(bVal);
       //      Serial.println(sensor_val[i]);
-
       snprintf (msg, 30, "\"%ld\":%ld", j, sensor_val[i]);
-
-            
-      //sent val to firebase
-      if (chkSum != 0)
-      {
-        Firebase.set( "sensor_val/" + String(j), sensor_val[i]);
-      }
-
-      
       object2.concat(msg);
       if (i < sensor_Count - 1)
       {
@@ -314,9 +295,35 @@ void loop() {
 
     if (chkSum != 0)
     {
+
+      Serial.print("act_state,val_sensor ---->  mqtt ...");
       client.publish("act_state", cstr1);
       client.publish("val_sensor", cstr2);
-      Serial.println("act_state,val_sensor ---->  mqtt");
+      Serial.println("ok");
+
+      StaticJsonBuffer<200> jsonBuffer;      
+      JsonObject& act_stateJSON = jsonBuffer.createObject();
+      JsonObject& val_sensorJSON = jsonBuffer.createObject();
+      
+      for (int i = 0; i < act_Count; i++)
+      {
+        act_stateJSON["act_read/" + String(i)] = act_read[i];
+      }
+
+      for (int i = 0; i < sensor_Count; i++)
+      {
+        act_stateJSON["sensor_val/" + String(i)] = sensor_val[i];
+      }
+      
+      
+
+      Serial.print("act_state,val_sensor ---->  mqtt ...");
+      Firebase.set("act_state", act_stateJSON);
+      Firebase.set("val_sensor", val_sensorJSON);
+
+
+      
+      Serial.println("ok");
     }
     else
     {
