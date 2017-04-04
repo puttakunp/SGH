@@ -75,11 +75,17 @@ bool setup_wifi() {
 
     Serial.println();
     Serial.print("Connecting to WiFi ");
+    int count = 0;
     while (WiFi.status() != WL_CONNECTED)
     {
       WiFi.begin(ssid, pass);
       delay(500);
       Serial.print(".");
+      count++;
+      if (count > 20)
+      {
+        break;
+      }
     }
     Serial.println("connected");
     Serial.print("IP address: ");
@@ -166,11 +172,9 @@ void setup() {
 void loop() {
   ///////////// check connect Wifi /////////////
   status = WiFi.status();
-  if ( status != WL_CONNECTED) {
-    while ( status != WL_CONNECTED) {
-      status = WiFi.begin(ssid, pass);
-      delay(500);
-    }
+  if ( status != WL_CONNECTED)
+  {
+    setup_wifi();
   }
   else
   {
@@ -180,7 +184,7 @@ void loop() {
     }
     else
     {
-      if ( millis() - lastSend > 2000 )
+      if ( millis() - lastSend > 0 )
       {
         lastSend = millis();
         ///////////// Receive value for Arduino /////////////
@@ -232,7 +236,7 @@ void loop() {
         }
 
         Serial.println(chkSum);
-        if (chkSum != 0)
+        if (chkSum != 0 && chkSum > 300)
         {
           ///////////// rBuf to Json /////////////
 
@@ -319,7 +323,7 @@ void loop() {
           Serial.println("checkNULL = 0;");
         }
 
-        //clear buffer rBuf
+        //        //clear buffer rBuf
         //        while (mySerial.available())
         //        {
         //          char ch = mySerial.read();

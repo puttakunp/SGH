@@ -43,7 +43,7 @@ byte rBuf[8];
 
 //Var time delay
 unsigned long previousMillis;
-const long interval = 2000;
+const long interval = 1000;
 
 
 #define resetFunc()         \
@@ -285,7 +285,6 @@ void loop() {
     if (( chkActModeAgo + chkActMode ) == 1)
     {
       Serial.println("Mode change !");
-      delay(2000);
     }
 
     if (digitalRead(actModePin) == 0) // Mode Switch manual
