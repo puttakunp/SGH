@@ -38,7 +38,7 @@ uint8_t act_state[act_Count];
 uint8_t act_read[act_Count];
 
 //init Serial
-byte tBuf[28];
+byte tBuf[29];
 byte rBuf[8];
 
 //Var time delay
@@ -160,7 +160,9 @@ void setup() {
   tBuf[25] = 0 ; // Air_Temp_val 3
   tBuf[26] = 0 ; // water_val
 
-  tBuf[27] = 237 ; // byte_stop
+  tBuf[27] = 0 ; // act mode
+
+  tBuf[28] = 237 ; // byte_stop
 
 
   //Set watch Dog timmer
@@ -174,15 +176,101 @@ void setup() {
 ////////////////////////////////////  loop  ////////////////////////////////////
 void loop() {
 
-  unsigned long currentMillis = millis();
+  ///////////// Receive act for ESP8266 /////////////
 
+  //set rBuf 0
+  for (int i = 0; i < sizeof(rBuf); i++)
+  {
+    rBuf[i] = -1;
+  }
+
+  int k = 0;
+  bool check = false;
+  while (mySerial.available())
+  {
+    rBuf[k] = mySerial.read();
+    //Serial.println(rBuf[k]);
+    if (rBuf[k] == 173 && k == 0)
+    {
+      check = true;
+    }
+
+    if (check == true)
+    {
+      if (rBuf[k] == 237 && k == (sizeof(rBuf) - 1))
+      {
+        k = 0;
+        check = false;
+        break;
+      }
+      k++;
+    }
+  }
+
+
+  int chkSum = 0;
+  for (int i = 0; i < sizeof(rBuf); i++)
+  {
+    chkSum = chkSum + rBuf[i];
+  }
+
+  if (chkSum != 255 * sizeof(rBuf))
+  {
+    for (int i = 0; i < act_Count; i++)
+    {
+      act_state[i] = rBuf[i+1];
+    }
+
+    Serial.println("Set act_state");
+    for (int i = 0; i < act_Count; i++)
+    {
+      Serial.println(act_state[i]);
+    }
+  }
+
+  ///////////// !Receive act /////////////
+
+
+
+  ///////////// act mode ande write /////////////
+  //act mode
+  int chkActMode = digitalRead(actModePin);
+  if (( chkActModeAgo + chkActMode ) == 1)
+  {
+    Serial.println("Mode change !");
+  }
+
+  if (digitalRead(actModePin) == 0) // Mode Switch manual
+  {
+    // write act
+    for (int i = 0; i < act_Count; i++)
+    {
+      digitalWrite(relayPin[i], HIGH);
+    }
+  }
+  else
+  {
+    for (int i = 0; i < act_Count; i++)
+    {
+      digitalWrite(relayPin[i], act_state[i]);
+    }
+  }
+
+  chkActModeAgo = chkActMode;
+
+  ///////////// !end act /////////////
+
+
+
+  unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
     wdt_reset();
     Serial.println();
     Serial.println(".");
 
-    // Read act
+
+    /////////////////  Read act //////////////////
     Serial.print("act :");
     for (int i = 0; i < act_Count; i++)
     {
@@ -191,7 +279,7 @@ void loop() {
     }
     Serial.println();
 
-    /////////////////  Sensor //////////////////
+    /////////////////  Read Sensor //////////////////
     for (int i = 0; i < sensor_Count; i++)
     {
       sensor_val[i] = 0;
@@ -274,38 +362,9 @@ void loop() {
     Serial.print("water_val : " );
     Serial.println(sensor_val[9]);
 
-    ///////////// !end Sensor /////////////
-
-
-    ///////////// act mode /////////////
-    //act mode
-    int chkActMode = digitalRead(actModePin);
     Serial.print("Mode act :");
     Serial.println(chkActMode);
-    if (( chkActModeAgo + chkActMode ) == 1)
-    {
-      Serial.println("Mode change !");
-    }
-
-    if (digitalRead(actModePin) == 0) // Mode Switch manual
-    {
-      // write act
-      for (int i = 0; i < act_Count; i++)
-      {
-        digitalWrite(relayPin[i], HIGH);
-      }
-    }
-    else
-    {
-      for (int i = 0; i < act_Count; i++)
-      {
-        digitalWrite(relayPin[i], act_state[i]);
-      }
-    }
-
-    chkActModeAgo = chkActMode;
-
-    ///////////// !end act /////////////
+    ///////////// !end Sensor /////////////
 
 
 
@@ -327,41 +386,20 @@ void loop() {
       tBuf[i + act_Count + sensor_Count + 1] = (int)bVal[2];
     }
 
+    tBuf[27] = chkActMode ; // act mode
+
     //    //print tBuf
-    //    Serial.println(tBuf[0]);
-    //    Serial.println(tBuf[1]);
-    //    Serial.println(tBuf[2]);
-    //    Serial.println(tBuf[3]);
-    //    Serial.println(tBuf[4]);
-    //    Serial.println(tBuf[5]);
-    //    Serial.println(tBuf[6]);
-    //    Serial.println(tBuf[7]);
-    //    Serial.println(tBuf[8]);
-    //    Serial.println(tBuf[9]);
-    //    Serial.println(tBuf[10]);
-    //    Serial.println(tBuf[11]);
-    //    Serial.println(tBuf[12]);
-    //    Serial.println(tBuf[13]);
-    //    Serial.println(tBuf[14]);
-    //    Serial.println(tBuf[15]);
-    //    Serial.println(tBuf[16]);
-    //    Serial.println(tBuf[17]);
-    //    Serial.println(tBuf[18]);
-    //    Serial.println(tBuf[19]);
-    //    Serial.println(tBuf[20]);
-    //    Serial.println(tBuf[21]);
-    //    Serial.println(tBuf[22]);
-    //    Serial.println(tBuf[23]);
-    //    Serial.println(tBuf[24]);
-    //    Serial.println(tBuf[25]);
-    //    Serial.println(tBuf[26]);
-    //    Serial.println(tBuf[27]);
+    //    for (int i = 0; i < sizeof(tBuf); i++)
+    //    {
+    //      Serial.println(tBuf[i]);
+    //    }
 
     ///////////// !Set tBuf /////////////
 
 
 
     ///////////// Sent tBuf to esp /////////////
+
     mySerial.write(tBuf, sizeof(tBuf));
 
     ///////////// !Sent tBuf to esp /////////////

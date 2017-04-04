@@ -28,10 +28,13 @@ unsigned long lastSend;
 
 // Init output PIN
 #define LED_PIN 2
+#define LED_R 14
+#define LED_G 12
+#define LED_B 13
 
 // Init Serial
 byte tBuf[8];
-byte rBuf[28];
+byte rBuf[29];
 
 const int sensor_Count = 10;
 long sensor_val[sensor_Count];
@@ -39,6 +42,9 @@ long sensor_val[sensor_Count];
 const int act_Count = 6;
 uint8_t act_state[act_Count];
 long act_read[act_Count];
+
+
+
 
 bool setup_mqtt()
 {
@@ -49,7 +55,12 @@ bool setup_mqtt()
     if (client.connect("ESP8266Client", MQTT_username, MQTT_password))
     {
       Serial.println("Connected");
+
       client.subscribe("act");
+
+      digitalWrite(LED_G, HIGH);
+      digitalWrite(LED_B, HIGH);
+      digitalWrite(LED_R, LOW);
       return true;
     }
     else
@@ -58,19 +69,32 @@ bool setup_mqtt()
       Serial.print(client.state());
       Serial.println(" try again in 5 seconds");
       delay(5000);
+
+      digitalWrite(LED_G, HIGH);
+      digitalWrite(LED_B, LOW);
+      digitalWrite(LED_R, LOW);
       return false;
     }
   }
   else
   {
     client.loop();
+    digitalWrite(LED_G, HIGH);
+    digitalWrite(LED_B, HIGH);
+    digitalWrite(LED_R, LOW);
     return true;
   }
 }
 
+
+
+
 bool setup_wifi() {
   if (WiFi.status() != WL_CONNECTED)
   {
+    digitalWrite(LED_R, HIGH);
+    digitalWrite(LED_B, LOW);
+    digitalWrite(LED_G, LOW);
     delay(100);
 
     Serial.println();
@@ -94,20 +118,35 @@ bool setup_wifi() {
 
     if (WiFi.status() != WL_CONNECTED)
     {
+      digitalWrite(LED_R, HIGH);
+      digitalWrite(LED_B, LOW);
+      digitalWrite(LED_G, LOW);
       return false;
+
     }
     else
     {
+
+      digitalWrite(LED_R, LOW);
+      digitalWrite(LED_G, HIGH);
+      digitalWrite(LED_B, LOW);
       return true;
     }
   }
   else
   {
+    digitalWrite(LED_R, LOW);
+    digitalWrite(LED_G, HIGH);
+    digitalWrite(LED_B, LOW);
     return true;
   }
 }
 
-void callback(char* topic, byte* payload, unsigned int length) {
+
+
+
+void callback(char* topic, byte* payload, unsigned int length)
+{
   Serial.println();
   Serial.print("Message arrived [");
   Serial.print(topic);
@@ -123,7 +162,34 @@ void callback(char* topic, byte* payload, unsigned int length) {
   while (i < sizeof(topic)) str_topic += (char)topic[i++];
 
 
+  ///////////// Sent tBuf to Arduino /////////////
+
+  Serial.println(length);
+  Serial.println(sizeof(tBuf) - 2);
+
+  if (length == sizeof(tBuf) - 2)
+  {
+
+    Serial.print("! Sent tBuf to Arduino : ");
+    for (int i = 0; i < sizeof(tBuf) - 2 ; i++)
+    {
+      tBuf[i+1] = payload[i] - '0';
+
+      Serial.print(tBuf[i+1]);
+    }
+    mySerial.write(tBuf, sizeof(tBuf));
+
+    Serial.println("  OK");
+    Serial.println();
+
+  }
+
+  ///////////// !Sent tBuf to Arduino /////////////
+
 }
+
+
+
 
 long bytesToInteger(byte b[4]) {
   long val = 0;
@@ -141,6 +207,11 @@ void integerToBytes(long val, byte b[4]) {
   b[3] = (byte )(val & 0xff);
 }
 
+
+
+
+
+
 //////////////////////////////////// setup  ////////////////////////////////////
 
 void setup() {
@@ -151,15 +222,34 @@ void setup() {
   Serial.println("Aloha Bababa ---------------------------------");
 
   pinMode(LED_PIN, OUTPUT);
-  digitalWrite( LED_PIN, LOW );
+
+
+  pinMode(LED_R, OUTPUT);
+  pinMode(LED_G, OUTPUT);
+  pinMode(LED_B, OUTPUT);
+
+  digitalWrite(LED_R, LOW);    // off
+  digitalWrite(LED_G, LOW);
+  digitalWrite(LED_B, LOW);
+  digitalWrite(LED_PIN, LOW);  // on
 
   client.setServer(MQTT_server, MQTT_port);
   client.setCallback(callback);
 
   setup_wifi();
+  delay(1000);
   setup_mqtt();
 
   Firebase.begin(FIREBASE_HOST, FIREBASE_KEY);
+
+  tBuf[0] = 173 ; // byte_start
+  tBuf[1] = 0 ; // Led
+  tBuf[2] = 0 ; // Watering
+  tBuf[3] = 0 ; // Fogger
+  tBuf[4] = 0 ; // Evap_cool
+  tBuf[5] = 0 ; // Vent_Fan
+  tBuf[6] = 0 ; // Vent_Fan
+  tBuf[7] = 237 ; // byte_stop
 
   mySerial.begin(112500);
   while (mySerial.available()) {
@@ -167,9 +257,10 @@ void setup() {
   }
 }
 
-
 ////////////////////////////////////  loop  ////////////////////////////////////
 void loop() {
+  client.loop();
+
   ///////////// check connect Wifi /////////////
   status = WiFi.status();
   if ( status != WL_CONNECTED)
@@ -187,6 +278,10 @@ void loop() {
       if ( millis() - lastSend > 0 )
       {
         lastSend = millis();
+
+
+
+
         ///////////// Receive value for Arduino /////////////
 
         //set rBuf 0
@@ -208,7 +303,7 @@ void loop() {
 
           if (check == true)
           {
-            if (rBuf[k] == 237 && k == 27)
+            if (rBuf[k] == 237 && k == (sizeof(rBuf) - 1))
             {
               k = 0;
               check = false;
@@ -238,7 +333,11 @@ void loop() {
         Serial.println(chkSum);
         if (chkSum != 0 && chkSum > 300)
         {
+          digitalWrite(LED_R, HIGH);
+
+
           ///////////// rBuf to Json /////////////
+
 
           char msg[30];
 
@@ -257,6 +356,8 @@ void loop() {
             }
             j++;
           }
+          snprintf (msg, 30, ",\"%ld\":%ld", j, int(rBuf[sizeof(rBuf) - 2]));
+          object1.concat(msg);
           object1.concat("}");
 
 
@@ -317,19 +418,28 @@ void loop() {
           Firebase.set("val_sensor", root2 );
           Serial.println("ok");
           ///////////// ! Sent Data to firebase /////////////
+
+
+          digitalWrite(LED_R, LOW);
+
+
+          //clear buffer rBuf
+          while (mySerial.available())
+          {
+            char ch = mySerial.read();
+          }
+
+
         }
         else
         {
           Serial.println("checkNULL = 0;");
         }
 
-        //        //clear buffer rBuf
-        //        while (mySerial.available())
-        //        {
-        //          char ch = mySerial.read();
-        //        }
-
         // -------------- code here --------------
+
+
+
 
         Serial.println(".");
         client.publish("conn", "1");
