@@ -3,14 +3,14 @@
 #include <DHT.h>
 #include <avr/wdt.h>
 
-SoftwareSerial mySerial(12, 13);
+SoftwareSerial mySerial(13, 12);    
 
 //init pin
 #define DHTTYPE21 DHT21
 #define DHTTYPE11 DHT11
 
 
-const int actModePin = 7;
+const int actModePin = 11;
 int chkActModeAgo ;
 
 const int SoilPin1 = A1;
@@ -24,9 +24,9 @@ byte buff_BH1750[2];
 
 DHT dht1(dhtPin1, DHTTYPE21);
 DHT dht2(dhtPin2, DHTTYPE21);
-DHT dht3(dhtPin3, DHTTYPE11);
+DHT dht3(dhtPin3, DHTTYPE21);
 
-const int relayPin[6] = { 3, 4, 5, 6 , 2 , 11};
+const int relayPin[6] = { 2, 3, 4, 5 , 6 , 7};
 
 //init sensor_val
 const int sensor_Count = 10;
@@ -235,12 +235,13 @@ void loop() {
   ///////////// act mode ande write /////////////
   //act mode
   int chkActMode = digitalRead(actModePin);
+  Serial.println(chkActMode);
   if (( chkActModeAgo + chkActMode ) == 1)
   {
     Serial.println("Mode change !");
   }
 
-  if (digitalRead(actModePin) == 0) // Mode Switch manual
+  if (digitalRead(actModePin) == 1) // Mode Switch manual
   {
     // write act
     for (int i = 0; i < act_Count; i++)
